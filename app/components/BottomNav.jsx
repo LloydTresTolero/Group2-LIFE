@@ -1,4 +1,4 @@
-import { useRouter, usePathname } from 'expo-router';
+import { usePathname, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const navItems = [
@@ -11,11 +11,47 @@ const navItems = [
 export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
+  const leftItems = navItems.slice(0, 2);
+  const rightItems = navItems.slice(2);
+  const isHelpActive = pathname.startsWith('/emergency');
 
   return (
     <View style={styles.container}>
-      {navItems.map((item) => {
-        const isActive = pathname === item.route || 
+      {leftItems.map((item) => {
+        const isActive =
+          pathname === item.route ||
+          (item.route === '/home' && pathname === '/home1');
+        return (
+          <TouchableOpacity
+            key={item.key}
+            style={styles.navItem}
+            onPress={() => router.push(item.route)}
+          >
+            <Text style={[styles.icon, isActive && styles.iconActive]}>
+              {item.icon}
+            </Text>
+            <Text style={[styles.label, isActive && styles.labelActive]}>
+              {item.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+
+      <View style={styles.helpSlot}>
+        <TouchableOpacity
+          style={[styles.helpButton, isHelpActive && styles.helpButtonActive]}
+          onPress={() => router.push('/emergency/type')}
+          accessibilityRole="button"
+          accessibilityLabel="Help"
+          activeOpacity={0.85}
+        >
+          <Text style={styles.helpButtonText}>HELP</Text>
+        </TouchableOpacity>
+      </View>
+
+      {rightItems.map((item) => {
+        const isActive =
+          pathname === item.route ||
           (item.route === '/home' && pathname === '/home1');
         return (
           <TouchableOpacity
@@ -56,6 +92,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     paddingVertical: 4,
+  },
+  helpSlot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpButton: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#DC143C',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#fff',
+    shadowColor: '#DC143C',
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  helpButtonActive: {
+    backgroundColor: '#B0102E',
+  },
+  helpButtonText: {
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#fff',
+    letterSpacing: 1,
   },
   icon: {
     fontSize: 24,
