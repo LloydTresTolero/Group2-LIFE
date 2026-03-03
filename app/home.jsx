@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { collection, getDocs, limit, orderBy, query, deleteDoc, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -43,13 +43,7 @@ export default function HomePage() {
   const [newDescription, setNewDescription] = useState('');
   const [newType, setNewType] = useState('medical');
 
-  useEffect(() => {
-    loadIncidents();
-    const interval = setInterval(loadIncidents, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadIncidents = async () => {
+  const loadIncidents = useCallback(async () => {
     try {
       const incidentsRef = collection(db, 'incidents');
       const user = auth.currentUser;
@@ -57,24 +51,30 @@ export default function HomePage() {
       const querySnapshot = await getDocs(q);
 
       const incidentsData = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
+      let hasActive = false;
+      querySnapshot.forEach((docSnap) => {
+        const data = docSnap.data();
         if (user && data.reportedBy === user.uid) {
           incidentsData.push({
-            id: doc.id,
+            id: docSnap.id,
             ...data,
           });
-          if (data.status === 'active') {
-            setHasActiveEmergency(true);
-          }
+          if (data.status === 'active') hasActive = true;
         }
       });
 
       setIncidents(incidentsData);
+      setHasActiveEmergency(hasActive);
     } catch (error) {
       console.error('Error loading incidents:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadIncidents();
+    const interval = setInterval(loadIncidents, 30000);
+    return () => clearInterval(interval);
+  }, [loadIncidents]);
 
   const handleDelete = async (incidentId) => {
     Alert.alert(
