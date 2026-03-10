@@ -1,5 +1,6 @@
 import { useRouter } from 'expo-router';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -12,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -36,7 +37,12 @@ export default function Signup() {
     setLoading(true);
     setErrorMsg('');
     try {
-      await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const { user } = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email,
+        role: 'user',
+        createdAt: new Date().toISOString(),
+      });
       setPassword('');
       setConfirmPassword('');
       setEmail('');

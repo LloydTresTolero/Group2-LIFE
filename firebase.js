@@ -3,12 +3,12 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDaHxZohIvyN13cEcBI95P4PKZAmcghGxw',
-  authDomain: 'edutasker-31495.firebaseapp.com',
-  projectId: 'edutasker-31495',
-  storageBucket: 'edutasker-31495.firebasestorage.app',
-  messagingSenderId: '835329304221',
-  appId: '1:835329304221:web:a92e238be2c220beec5674',
+  apiKey: "AIzaSyCCmLY20wHwL5YDiEJWJocXMq6JHUkrNzo",
+  authDomain: "life-9fb4f.firebaseapp.com",
+  projectId: "life-9fb4f",
+  storageBucket: "life-9fb4f.firebasestorage.app",
+  messagingSenderId: "1026529359003",
+  appId: "1:1026529359003:web:dc1a788e59abb4f630423e"
 };
 
 const app = initializeApp(firebaseConfig);

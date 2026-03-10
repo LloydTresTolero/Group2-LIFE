@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import BottomNav from '../components/BottomNav';
@@ -93,6 +93,22 @@ export default function EmergencyType() {
           ))}
         </View>
 
+        <TouchableOpacity
+          style={styles.callEmergencyButton}
+          onPress={() => {
+            Alert.alert(
+              'Call 911',
+              'This will dial the emergency number (911). Continue?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Call', onPress: () => Linking.openURL('tel:911') },
+              ]
+            );
+          }}
+        >
+          <Text style={styles.callEmergencyText}>📞 Call 911 Now</Text>
+        </TouchableOpacity>
+
         <View style={styles.addressContainer}>
           <Text style={styles.addressLabel}>Your current address</Text>
           <View style={styles.addressRow}>
@@ -155,6 +171,25 @@ const styles = StyleSheet.create({
   typeLabel: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#fff',
+  },
+  callEmergencyButton: {
+    backgroundColor: '#DC143C',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#DC143C',
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  callEmergencyText: {
+    fontSize: 16,
+    fontWeight: '800',
     color: '#fff',
   },
   addressContainer: {

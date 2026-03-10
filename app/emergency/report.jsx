@@ -1,11 +1,12 @@
 import * as Location from 'expo-location';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { addIncident } from '../../lib/incidentStore';
 import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { auth, db } from '../../firebase';
+import { auth } from '../../firebase';
 
 const EMERGENCY_COLORS = {
   fire: '#FF6B35',
@@ -100,26 +101,21 @@ export default function EmergencyReport() {
         return;
       }
 
-     
-      const incidentData = {
+      addIncident({
         type: emergencyType,
         typeLabel: typeLabel,
         description: description.trim(),
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-        address: address,
+        address: address || 'Location shared',
         reportedBy: user.uid,
         reportedByEmail: user.email,
         status: 'active',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      };
-
-      await addDoc(collection(db, 'incidents'), incidentData);
+      });
 
       router.replace({
         pathname: '/emergency/rescue',
-        params: { estimatedTime: '21' },
+        params: { estimatedTime: '5' },
       });
     } catch (error) {
       console.error('Error submitting report:', error);
@@ -145,6 +141,22 @@ export default function EmergencyReport() {
           <Text style={styles.headerTitle}>{typeLabel} Emergency</Text>
           <Text style={styles.headerSubtitle}>Report your emergency</Text>
         </View>
+
+        <TouchableOpacity
+          style={[styles.call911Button, { backgroundColor: emergencyColor }]}
+          onPress={() => {
+            Alert.alert(
+              'Call 911',
+              'This will dial the emergency number. Continue?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Call', onPress: () => Linking.openURL('tel:911') },
+              ]
+            );
+          }}
+        >
+          <Text style={styles.call911ButtonText}>📞 Call 911 Now</Text>
+        </TouchableOpacity>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>📍 Location</Text>
@@ -228,6 +240,17 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 24,
     paddingBottom: 40,
+  },
+  call911Button: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  call911ButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '800',
   },
   header: {
     borderLeftWidth: 4,

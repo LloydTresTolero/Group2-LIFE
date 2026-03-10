@@ -1,10 +1,15 @@
 import { useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import { useEffect } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 
 export default function Index() {
   const router = useRouter();
+
+  useEffect(() => {
+    Location.requestForegroundPermissionsAsync().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const timeout = setTimeout(() => {

@@ -64,6 +64,15 @@ export default function Profile() {
 
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => router.push('/incidents')}
+          >
+            <Text style={styles.menuIcon}>🚨</Text>
+            <Text style={styles.menuText}>All Incidents</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => Alert.alert('Notifications', 'Notifications feature coming soon!')}
           >
             <Text style={styles.menuIcon}>🔔</Text>

@@ -4,13 +4,15 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { collection, doc, getDocs, limit, orderBy, query, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
+import { useUserRole } from '../lib/useUserRole';
 
 const EMERGENCY_COLORS = {
   fire: '#FF6B35',
@@ -28,9 +30,28 @@ const EMERGENCY_ICONS = {
 
 export default function Incidents() {
   const router = useRouter();
+  const { isResponder, isAdmin } = useUserRole();
+  const canUpdateStatus = isResponder || isAdmin;
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [updatingId, setUpdatingId] = useState(null);
+
+  const handleUpdateStatus = async (incident) => {
+    const next = incident.status === 'active' ? 'resolved' : 'active';
+    setUpdatingId(incident.id);
+    try {
+      await updateDoc(doc(db, 'incidents', incident.id), {
+        status: next,
+        updatedAt: serverTimestamp(),
+      });
+      await loadIncidents();
+    } catch (e) {
+      console.error('Error updating status:', e);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   useEffect(() => {
     loadIncidents();
@@ -166,6 +187,37 @@ export default function Incidents() {
                       Reported by: {incident.reportedByEmail}
                     </Text>
                   )}
+
+                  <View style={styles.incidentActions}>
+                    <TouchableOpacity
+                      style={styles.shareIncidentButton}
+                      onPress={async () => {
+                        try {
+                          await Share.share({
+                            message: `Incident: ${incident.typeLabel || incident.type}\n${incident.description || ''}\n📍 ${incident.address || ''}${incident.latitude && incident.longitude ? `\n\nMap: https://www.google.com/maps?q=${incident.latitude},${incident.longitude}` : ''}\n\nShared via LIFE Emergency App`,
+                            title: 'Emergency Incident',
+                          });
+                        } catch (e) {}
+                      }}
+                    >
+                      <Text style={styles.shareIncidentText}>Share</Text>
+                    </TouchableOpacity>
+                    {canUpdateStatus && (
+                    <TouchableOpacity
+                      style={styles.updateStatusButton}
+                      onPress={() => handleUpdateStatus(incident)}
+                      disabled={updatingId === incident.id}
+                    >
+                      <Text style={styles.updateStatusText}>
+                        {updatingId === incident.id
+                          ? 'Updating...'
+                          : incident.status === 'active'
+                          ? 'Mark Resolved'
+                          : 'Mark Active'}
+                      </Text>
+                    </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
               );
             })
@@ -315,6 +367,34 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#333',
+  },
+  incidentActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  shareIncidentButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+  },
+  shareIncidentText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  updateStatusButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  updateStatusText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
   },
   infoBox: {
     backgroundColor: '#1a1a1a',

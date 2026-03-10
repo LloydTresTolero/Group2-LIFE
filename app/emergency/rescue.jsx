@@ -1,5 +1,5 @@
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from '../components/BottomNav';
 
@@ -32,6 +32,23 @@ export default function RescueTracking() {
           💡 Your emergency has been reported. Rescue teams are en route to your
           location.
         </Text>
+        <TouchableOpacity
+          style={styles.shareButton}
+          onPress={async () => {
+            try {
+              await Share.share({
+                message: 'I need emergency help. Rescue is on the way. Shared via LIFE Emergency App.',
+                title: 'Emergency Alert - Share with trusted contacts',
+              });
+            } catch (e) {
+              if (e.message && !e.message.includes('User did not share')) {
+                // ignore
+              }
+            }
+          }}
+        >
+          <Text style={styles.shareButtonText}>Share with trusted contacts</Text>
+        </TouchableOpacity>
       </View>
 
       <BottomNav />
@@ -97,5 +114,18 @@ const styles = StyleSheet.create({
     color: '#1565c0',
     lineHeight: 20,
     textAlign: 'center',
+    marginBottom: 16,
+  },
+  shareButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
+  shareButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

@@ -12,7 +12,7 @@ export default function BottomNav() {
   const router = useRouter();
   const pathname = usePathname();
   const leftItems = navItems.slice(0, 2);
-  const rightItems = navItems.slice(2);
+  const rightItems = navItems.slice(2); // Contacts, Profile
   const isHelpActive = pathname.startsWith('/emergency');
 
   return (

@@ -12,41 +12,52 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
 import BottomNav from './components/BottomNav';
 
+// Evacuation centers in Balamban, Cebu, Philippines
 const SAMPLE_SHELTERS = [
   {
     id: '1',
-    name: 'Community Center Main',
-    address: '123 Main Street, City',
-    capacity: 500,
+    name: 'LAMAC Multi-Purpose Center',
+    address: 'Aliwanay, Balamban, Cebu',
+    capacity: 400,
     distance: null,
+    latitude: 10.4848,
+    longitude: 123.7187,
   },
   {
     id: '2',
-    name: 'High School Gymnasium',
-    address: '456 School Road, City',
+    name: 'Balamban Municipal Hall (CPAC)',
+    address: 'Poblacion, Balamban, Cebu',
     capacity: 300,
     distance: null,
+    latitude: 10.5048,
+    longitude: 123.7143,
   },
   {
     id: '3',
-    name: 'City Hall Basement',
-    address: '789 Government Ave, City',
-    capacity: 200,
+    name: 'Balamban National High School Gym',
+    address: 'Poblacion, Balamban, Cebu',
+    capacity: 500,
     distance: null,
+    latitude: 10.5062,
+    longitude: 123.7128,
   },
   {
     id: '4',
-    name: 'Sports Complex',
-    address: '321 Sports Way, City',
-    capacity: 800,
+    name: 'Buanoy Barangay Evacuation Center',
+    address: 'Buanoy, Balamban, Cebu',
+    capacity: 200,
     distance: null,
+    latitude: 10.5212,
+    longitude: 123.7012,
   },
   {
     id: '5',
-    name: 'Library Community Room',
-    address: '654 Book Lane, City',
-    capacity: 150,
+    name: 'Sunog Integrated School',
+    address: 'Sunog, Balamban, Cebu',
+    capacity: 250,
     distance: null,
+    latitude: 10.4622,
+    longitude: 123.7522,
   },
 ];
 
@@ -88,27 +99,15 @@ export default function Shelters() {
       const userLat = location.coords.latitude;
       const userLon = location.coords.longitude;
 
-      const shelterCoords = [
-        { lat: userLat + 0.01, lon: userLon + 0.01 },
-        { lat: userLat + 0.02, lon: userLon - 0.01 },
-        { lat: userLat - 0.01, lon: userLon + 0.02 },
-        { lat: userLat - 0.02, lon: userLon - 0.02 },
-        { lat: userLat + 0.015, lon: userLon + 0.015 },
-      ];
-
-      const sheltersWithDistance = shelters.map((shelter, index) => {
-        const coords = shelterCoords[index];
-        const distance = calculateDistance(
-          userLat,
-          userLon,
-          coords.lat,
-          coords.lon
-        );
+      const sheltersWithDistance = shelters.map((shelter) => {
+        const lat = shelter.latitude ?? userLat + 0.01;
+        const lon = shelter.longitude ?? userLon + 0.01;
+        const distance = calculateDistance(userLat, userLon, lat, lon);
         return {
           ...shelter,
-          distance: distance,
-          latitude: coords.lat,
-          longitude: coords.lon,
+          distance,
+          latitude: lat,
+          longitude: lon,
         };
       });
 
@@ -124,8 +123,18 @@ export default function Shelters() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Facilities</Text>
-        <Text style={styles.subtitle}>Evacuation shelters and safe locations</Text>
+        <View style={styles.headerTop}>
+          <View>
+            <Text style={styles.title}>Facilities</Text>
+            <Text style={styles.subtitle}>Evacuation shelters in Balamban, Cebu</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.mapLinkButton}
+            onPress={() => router.push('/map')}
+          >
+            <Text style={styles.mapLinkText}>🗺️ Map</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {loading ? (
@@ -198,6 +207,22 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  mapLinkButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    backgroundColor: '#DC143C',
+    borderRadius: 12,
+  },
+  mapLinkText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   title: {
     fontSize: 28,

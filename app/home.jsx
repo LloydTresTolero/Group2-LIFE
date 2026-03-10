@@ -1,8 +1,12 @@
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { collection, getDocs, limit, orderBy, query, deleteDoc, doc, updateDoc, serverTimestamp, addDoc } from 'firebase/firestore';
+import { collection, getDocs, limit, orderBy, query, deleteDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { useEffect, useState, useCallback } from 'react';
+import { Linking } from 'react-native';
+import { addIncident, getIncidents, removeIncident, subscribe } from '../lib/incidentStore';
 import {
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -33,8 +37,18 @@ const EMERGENCY_ICONS = {
 export default function HomePage() {
   const router = useRouter();
   const [incidents, setIncidents] = useState([]);
+  const [localIncidents, setLocalIncidents] = useState(getIncidents);
   const [selectedFilter, setSelectedFilter] = useState(null);
-  const [hasActiveEmergency, setHasActiveEmergency] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      setLocalIncidents(getIncidents());
+    }, [])
+  );
+
+  useEffect(() => {
+    return subscribe(() => setLocalIncidents(getIncidents()));
+  }, []);
   const [editingIncident, setEditingIncident] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editType, setEditType] = useState('');
@@ -51,7 +65,6 @@ export default function HomePage() {
       const querySnapshot = await getDocs(q);
 
       const incidentsData = [];
-      let hasActive = false;
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         if (user && data.reportedBy === user.uid) {
@@ -59,16 +72,21 @@ export default function HomePage() {
             id: docSnap.id,
             ...data,
           });
-          if (data.status === 'active') hasActive = true;
         }
       });
 
       setIncidents(incidentsData);
-      setHasActiveEmergency(hasActive);
     } catch (error) {
       console.error('Error loading incidents:', error);
     }
   }, []);
+
+  const allIncidents = [...localIncidents, ...incidents].sort((a, b) => {
+    const ta = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+    const tb = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+    return tb - ta;
+  });
+  const hasActiveEmergency = allIncidents.some((i) => i.status === 'active');
 
   useEffect(() => {
     loadIncidents();
@@ -76,7 +94,7 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [loadIncidents]);
 
-  const handleDelete = async (incidentId) => {
+  const handleDelete = (incident) => {
     Alert.alert(
       'Delete Report',
       'Are you sure you want to delete this report?',
@@ -86,9 +104,14 @@ export default function HomePage() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (incident.source === 'local') {
+              removeIncident(incident.id);
+              setLocalIncidents(getIncidents());
+              return;
+            }
             try {
               setLoading(true);
-              await deleteDoc(doc(db, 'incidents', incidentId));
+              await deleteDoc(doc(db, 'incidents', incident.id));
               await loadIncidents();
             } catch (error) {
               Alert.alert('Error', 'Failed to delete report.');
@@ -103,6 +126,7 @@ export default function HomePage() {
   };
 
   const handleEdit = (incident) => {
+    if (incident.source === 'local') return;
     setEditingIncident(incident);
     setEditDescription(incident.description || '');
     setEditType(incident.type || 'medical');
@@ -132,7 +156,7 @@ export default function HomePage() {
     }
   };
 
-  const handleAdd = async () => {
+  const handleAdd = () => {
     if (!newDescription.trim()) {
       Alert.alert('Error', 'Description cannot be empty.');
       return;
@@ -145,29 +169,18 @@ export default function HomePage() {
       return;
     }
 
-    try {
-      setLoading(true);
-      await addDoc(collection(db, 'incidents'), {
-        type: newType,
-        typeLabel: newType.charAt(0).toUpperCase() + newType.slice(1),
-        description: newDescription.trim(),
-        address: 'Your location',
-        reportedBy: user.uid,
-        reportedByEmail: user.email,
-        status: 'active',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-      setShowAddModal(false);
-      setNewDescription('');
-      setNewType('medical');
-      await loadIncidents();
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create report.');
-      console.error('Error creating:', error);
-    } finally {
-      setLoading(false);
-    }
+    addIncident({
+      type: newType,
+      typeLabel: newType.charAt(0).toUpperCase() + newType.slice(1),
+      description: newDescription.trim(),
+      address: 'Your location',
+      reportedBy: user.uid,
+      reportedByEmail: user.email,
+      status: 'active',
+    });
+    setShowAddModal(false);
+    setNewDescription('');
+    setNewType('medical');
   };
 
   const formatTimestamp = (timestamp) => {
@@ -183,17 +196,17 @@ export default function HomePage() {
   };
 
   const filteredIncidents = selectedFilter
-    ? incidents.filter((inc) => inc.type === selectedFilter)
-    : incidents;
+    ? allIncidents.filter((inc) => inc.type === selectedFilter)
+    : allIncidents;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {hasActiveEmergency && (
         <View style={styles.emergencyBanner}>
           <Text style={styles.emergencyBannerTitle}>Emergency</Text>
-          <Text style={styles.emergencyBannerSubtitle}>On the way!</Text>
+          <Text style={styles.emergencyBannerSubtitle}>Rescue on the way</Text>
           <Text style={styles.emergencyBannerText}>
-            Rescue is on the way!
+            Track responders below — tap "View on map" to see location
           </Text>
         </View>
       )}
@@ -205,12 +218,20 @@ export default function HomePage() {
       >
         <View style={styles.headerRow}>
           <Text style={styles.sectionTitle}>Recent Activities</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => setShowAddModal(true)}
-          >
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              style={styles.viewAllButton}
+              onPress={() => router.push('/incidents')}
+            >
+              <Text style={styles.viewAllButtonText}>All Incidents</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setShowAddModal(true)}
+            >
+              <Text style={styles.addButtonText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.filterContainer}>
@@ -273,16 +294,48 @@ export default function HomePage() {
                     📍 {incident.address}
                   </Text>
                 )}
+                {incident.status === 'active' && (incident.latitude != null && incident.longitude != null) && (
+                  <TouchableOpacity
+                    style={styles.trackButton}
+                    onPress={() =>
+                      Linking.openURL(`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`)
+                    }
+                  >
+                    <Text style={styles.trackButtonText}>🗺️ View on map — track rescue</Text>
+                  </TouchableOpacity>
+                )}
                 <View style={styles.actionButtons}>
                   <TouchableOpacity
-                    style={[styles.actionButton, styles.editButton]}
-                    onPress={() => handleEdit(incident)}
+                    style={[styles.actionButton, styles.shareButton]}
+                    onPress={async () => {
+                      try {
+                        await Share.share({
+                          message: `Emergency: ${incident.typeLabel || incident.type}\n${incident.description || ''}\n📍 ${incident.address || 'Location shared'}\n\nShared via LIFE Emergency App`,
+                          title: 'Emergency Alert',
+                          url: incident.latitude && incident.longitude
+                            ? `https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`
+                            : undefined,
+                        });
+                      } catch (e) {
+                        if (e.message && !e.message.includes('User did not share')) {
+                          Alert.alert('Error', 'Could not share.');
+                        }
+                      }
+                    }}
                   >
-                    <Text style={styles.actionButtonText}>Edit</Text>
+                    <Text style={styles.actionButtonText}>Share</Text>
                   </TouchableOpacity>
+                  {incident.source !== 'local' && (
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.editButton]}
+                      onPress={() => handleEdit(incident)}
+                    >
+                      <Text style={styles.actionButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={[styles.actionButton, styles.deleteButton]}
-                    onPress={() => handleDelete(incident.id)}
+                    onPress={() => handleDelete(incident)}
                   >
                     <Text style={styles.actionButtonText}>Delete</Text>
                   </TouchableOpacity>
@@ -347,13 +400,8 @@ export default function HomePage() {
               <TouchableOpacity
                 style={[styles.modalButton, styles.saveModalButton]}
                 onPress={handleAdd}
-                disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.saveModalButtonText}>Save</Text>
-                )}
+                <Text style={styles.saveModalButtonText}>Save</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -503,6 +551,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  viewAllButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f0f0f0',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  viewAllButtonText: {
+    color: '#666',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   addButton: {
     backgroundColor: '#DC143C',
     paddingHorizontal: 16,
@@ -527,6 +593,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#ccc',
   },
+  trackButton: {
+    marginTop: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#2196F3',
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  trackButtonText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   actionButtons: {
     flexDirection: 'row',
     gap: 8,
@@ -540,6 +619,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     alignItems: 'center',
+  },
+  shareButton: {
+    backgroundColor: '#4CAF50',
   },
   editButton: {
     backgroundColor: '#2196F3',

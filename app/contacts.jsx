@@ -1,19 +1,17 @@
-import { useRouter } from 'expo-router';
-import { StyleSheet, Text, TouchableOpacity, View, Linking } from 'react-native';
+import { Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import BottomNav from './components/BottomNav';
 
-const EMERGENCY_CONTACTS = [
-  { name: 'Emergency Services', number: '911', icon: '🚨' },
-  { name: 'Fire Department', number: '911', icon: '🔥' },
-  { name: 'Police', number: '911', icon: '🚔' },
-  { name: 'Medical Emergency', number: '911', icon: '🏥' },
-  { name: 'Coast Guard', number: '911', icon: '⚓' },
+const FAMILY_CONTACTS = [
+  { name: 'Mama', number: '+639171234567', icon: '👤' },
+  { name: 'Papa', number: '+639181234567', icon: '👤' },
+  { name: 'Ate', number: '+639191234567', icon: '👤' },
+  { name: 'Kuya', number: '+639201234567', icon: '👤' },
+  { name: 'Uncle', number: '+639211234567', icon: '👤' },
+  { name: 'Aunty', number: '+639221234567', icon: '👤' },
 ];
 
 export default function Contacts() {
-  const router = useRouter();
-
   const handleCall = (number) => {
     Linking.openURL(`tel:${number}`);
   };
@@ -21,12 +19,12 @@ export default function Contacts() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.title}>Emergency Contacts</Text>
-        <Text style={styles.subtitle}>Quick access to emergency services</Text>
+        <Text style={styles.title}>Family Contacts</Text>
+        <Text style={styles.subtitle}>Trusted family members</Text>
       </View>
 
       <View style={styles.contactsList}>
-        {EMERGENCY_CONTACTS.map((contact, index) => (
+        {FAMILY_CONTACTS.map((contact, index) => (
           <TouchableOpacity
             key={index}
             style={styles.contactCard}
